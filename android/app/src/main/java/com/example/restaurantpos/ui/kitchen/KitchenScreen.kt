@@ -20,16 +20,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.restaurantpos.data.model.Order
 import com.example.restaurantpos.data.model.OrderItem
+import com.example.restaurantpos.ui.kitchen.KitchenUiState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KitchenScreen(viewModel: KitchenViewModel) {
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
-            SmallTopAppBar(
+            TopAppBar(
                 title = { Text("Kitchen Display System", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.smallTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF1E1E1E),
                     titleContentColor = Color.White
                 )
