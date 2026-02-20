@@ -1,5 +1,7 @@
 package com.example.restaurantpos.ui.kitchen
 
+import android.media.RingtoneManager
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,29 +9,48 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.restaurantpos.data.model.Order
 import com.example.restaurantpos.data.model.OrderItem
 import com.example.restaurantpos.ui.kitchen.KitchenUiState
 
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Icon
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    // Audio Notification Effect
+    var previousOrderCount by remember { mutableStateOf(0) }
+
+    LaunchedEffect(uiState) {
+        if (uiState is KitchenUiState.Success) {
+            val orders = (uiState as KitchenUiState.Success).orders
+            val currentCount = orders.filter { it.status == "pending" }.size
+            
+            if (currentCount > previousOrderCount) {
+                // New order arrived! Play sound
+                try {
+                    val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                    val r = RingtoneManager.getRingtone(context, notification)
+                    r.play()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            previousOrderCount = currentCount
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -55,7 +76,7 @@ fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color(0xFF121212))
+                .background(Color(0xFF2C3E50)) // Dark Blue-Gray Theme
         ) {
             when (val state = uiState) {
                 is KitchenUiState.Loading -> {
@@ -159,98 +180,166 @@ fun OrderTicket(
     actionColor: Color,
     onAction: () -> Unit
 ) {
-    val ticketColor = if (order.status == "pending") Color(0xFFFFF9C4) else Color(0xFFE3F2FD) // Light yellow for pending, light blue for cooking
-    val textColor = Color.Black
+    // Checkbox State Map: Maps OrderItem.id to Boolean
+    val itemStates = remember(order.id) { 
+        mutableStateMapOf<Int, Boolean>().apply {
+            order.items.forEach { put(it.id, false) }
+        }
+    }
+    
+    // Check if ALL items in this specific order are checked
+    val allChecked = if (order.items.isEmpty()) true else order.items.all { itemStates[it.id] == true }
+
+    // Order Type Logic based on table_number
+    val orderTypeColor = when {
+        order.tableNumber == 0 -> Color(0xFF3498DB) // Takeaway (Blue)
+        order.tableNumber < 0 -> Color(0xFFE67E22)  // Delivery (Orange)
+        else -> Color(0xFF27AE60)                   // Dine-in (Green)
+    }
+    
+    val orderTypeLabel = when {
+        order.tableNumber == 0 -> "Takeaway"
+        order.tableNumber < 0 -> "Delivery"
+        else -> "Table ${order.tableNumber}"
+    }
 
     Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = ticketColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFECF0F1)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Table ${order.tableNumber}",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = textColor
-                )
-                Text(
-                    text = "#${order.id}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.DarkGray
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Time: ${order.createdAt.substring(11, 19)}", // Assuming ISO format
-                fontSize = 14.sp,
-                color = Color.DarkGray
+        Column {
+            // Thick Colored Top Border
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .background(orderTypeColor)
             )
+            
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Header (Type & Time)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Badge
+                    Surface(
+                        color = orderTypeColor,
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(
+                            text = orderTypeLabel,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                    
+                    Text(
+                        text = "Time: ${order.createdAt.substring(11, 19)}",
+                        fontSize = 14.sp,
+                        color = Color(0xFF7F8C8D),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                Divider(color = Color.LightGray)
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.Gray.copy(alpha = 0.5f))
-
-            // Items
-            order.items.forEach { item ->
-                OrderItemRow(item)
+                // Items list with checkboxes
+                order.items.forEach { item ->
+                    val isChecked = itemStates[item.id] ?: false
+                    OrderItemRow(
+                        item = item, 
+                        isChecked = isChecked, 
+                        onCheckedChange = { checked -> itemStates[item.id] = checked }
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Action Button
+            // Action Button (Full Width Bottom)
             Button(
                 onClick = onAction,
-                colors = ButtonDefaults.buttonColors(containerColor = actionColor),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
+                enabled = allChecked,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (order.status == "pending") Color(0xFF3498DB) else Color(0xFFE74C3C),
+                    disabledContainerColor = Color(0xFFBDC3C7)
+                ),
+                shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
             ) {
-                Text(actionText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = actionText,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (allChecked) Color.White else Color.DarkGray
+                )
             }
         }
     }
 }
 
 @Composable
-fun OrderItemRow(item: OrderItem) {
-    Column(modifier = Modifier.padding(bottom = 8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+fun OrderItemRow(
+    item: OrderItem, 
+    isChecked: Boolean, 
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val textColor = if (isChecked) Color.Gray else Color(0xFF34495E)
+    val textDecoration = if (isChecked) TextDecoration.LineThrough else TextDecoration.None
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Checkbox(
+            checked = isChecked,
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(
+                checkedColor = Color(0xFF27AE60),
+                uncheckedColor = Color.Gray
+            )
+        )
+        
+        Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
             Text(
                 text = "${item.quantity}x ${item.menuItemName}",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = textColor,
+                textDecoration = textDecoration
             )
-        }
-        
-        if (item.notes.isNotBlank()) {
-            Row(
-                modifier = Modifier.padding(top = 4.dp, start = 8.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = "Notes",
-                    modifier = Modifier.size(16.dp),
-                    tint = Color(0xFFE65100) // Deep Orange
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = item.notes,
-                    fontSize = 14.sp,
-                    color = Color(0xFFE65100),
-                    fontWeight = FontWeight.Medium
-                )
+            
+            if (item.notes.isNotBlank()) {
+                Row(
+                    modifier = Modifier.padding(top = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Notes",
+                        modifier = Modifier.size(14.dp),
+                        tint = if (isChecked) Color.Gray else Color(0xFFE67E22)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = item.notes,
+                        fontSize = 14.sp,
+                        color = if (isChecked) Color.Gray else Color(0xFFE67E22),
+                        fontWeight = FontWeight.Medium,
+                        textDecoration = textDecoration
+                    )
+                }
             }
         }
     }
