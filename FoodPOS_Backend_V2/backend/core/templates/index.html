@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Menu</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'core/css/styles.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="glass-header">
+            <div class="logo">
+                <h1>FoodPOS</h1>
+            </div>
+            <div class="table-info">
+                <span>Table: <input type="number" id="table-number" value="1" min="1" max="99"></span>
+            </div>
+        </header>
+
+        <!-- Hero/Welcome Section -->
+        <div class="hero-banner">
+            <h2>Welcome, Hungry? 😋</h2>
+            <p>Select your favorite dishes below.</p>
+        </div>
+
+        <!-- Category Nav -->
+        <nav class="category-scroll">
+            <div class="category-track" id="category-list">
+                <!-- Categories injected by JS -->
+                <button class="category-pill active" data-id="all">All</button>
+            </div>
+        </nav>
+
+        <!-- Menu Grid -->
+        <main class="menu-grid" id="menu-grid">
+            <!-- Menu Items injected by JS -->
+        </main>
+
+        <!-- Floating Cart Button -->
+        <button class="cart-fab" id="cart-fab" onclick="toggleCart()">
+            <span class="cart-icon">🛒</span>
+            <span class="cart-count" id="cart-count">0</span>
+        </button>
+
+        <!-- Cart Sidebar/Modal -->
+        <div class="cart-overlay" id="cart-overlay" onclick="toggleCart()"></div>
+        <aside class="cart-sidebar" id="cart-sidebar">
+            <div class="cart-header">
+                <h2>Your Order</h2>
+                <button class="close-btn" onclick="toggleCart()">×</button>
+            </div>
+            <div class="cart-items" id="cart-items">
+                <!-- Cart items injected here -->
+                <div class="empty-cart-msg">Your cart is empty</div>
+            </div>
+            <div class="cart-footer">
+                <div class="total-row">
+                    <span>Total</span>
+                    <span id="cart-total">฿0.00</span>
+                </div>
+                <button class="checkout-btn" onclick="placeOrder()">Send Order</button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">Order Sent!</div>
+
+    <script src="{% static 'core/js/app.js' %}"></script>
+</body>
+
+</html>
