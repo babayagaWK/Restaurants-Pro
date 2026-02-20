@@ -22,9 +22,13 @@ import com.example.restaurantpos.data.model.Order
 import com.example.restaurantpos.data.model.OrderItem
 import com.example.restaurantpos.ui.kitchen.KitchenUiState
 
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun KitchenScreen(viewModel: KitchenViewModel) {
+fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
@@ -34,7 +38,16 @@ fun KitchenScreen(viewModel: KitchenViewModel) {
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF1E1E1E),
                     titleContentColor = Color.White
-                )
+                ),
+                actions = {
+                    IconButton(onClick = onResetUrl) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Change Server URL",
+                            tint = Color.White
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
