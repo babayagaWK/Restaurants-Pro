@@ -143,43 +143,7 @@ fun KitchenBoard(orders: List<Order>, onUpdateStatus: (Int, String) -> Unit) {
     }
 }
 
-@Composable
-fun OrderColumn(
-    title: String,
-    orders: List<Order>,
-    modifier: Modifier = Modifier,
-    actionText: String,
-    actionColor: Color,
-    onAction: (Order) -> Unit
-) {
-    Column(
-        modifier = modifier
-            .fillMaxHeight()
-            .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
-            .padding(16.dp)
-    ) {
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
 
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(orders) { order ->
-                OrderTicket(
-                    order = order,
-                    actionText = actionText,
-                    actionColor = actionColor,
-                    onAction = { onAction(order) }
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun OrderTicket(
