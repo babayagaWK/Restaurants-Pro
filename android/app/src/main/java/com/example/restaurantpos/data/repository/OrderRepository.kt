@@ -14,19 +14,14 @@ class OrderRepository(private val apiService: PosApiService) {
     fun pollOrders(status: String = "pending,cooking", intervalMillis: Long = 5000): Flow<List<Order>> = flow {
         while (true) {
             try {
-                // Fetch orders with specific statuses
                 val response = apiService.getOrders(status = status) 
                 if (response.isSuccessful) {
-                    response.body()?.let { orders ->
-                        emit(orders)
-                    }
+                    response.body()?.let { emit(it) }
                 } else {
-                    // Throw to be caught by ViewModel
-                    throw Exception("Polling error: ${response.code()} ${response.message()}")
+                    println("Polling error: ${response.code()}")
                 }
             } catch (e: Exception) {
-                // Re-throw so ViewModel catch block handles it
-                throw e
+                println("Polling exception: ${e.message}")
             }
             delay(intervalMillis)
         }

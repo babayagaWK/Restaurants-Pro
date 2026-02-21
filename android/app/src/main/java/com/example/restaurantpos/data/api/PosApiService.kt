@@ -22,7 +22,7 @@ interface PosApiService {
     suspend fun createOrder(@Body order: OrderRequest): Response<Order>
 
     @GET("api/api/orders/")
-    suspend fun getOrders(@Query("status") status: String? = null): Response<List<Order>>
+    suspend fun getOrders(@Query("status", encoded = true) status: String? = null): Response<List<Order>>
 
     @retrofit2.http.PATCH("api/api/orders/{id}/")
     suspend fun updateOrderStatus(
