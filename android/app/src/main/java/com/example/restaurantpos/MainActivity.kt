@@ -35,12 +35,17 @@ class MainActivity : ComponentActivity() {
 
             if (serverUrl.isEmpty()) {
                 ConfigScreen(onUrlSet = { url ->
-                    // Make sure the URL ends with a slash
-                    val formattedUrl = if (url.endsWith("/")) url else "$url/"
-                    val finalUrl = if (!formattedUrl.startsWith("http")) "http://$formattedUrl" else formattedUrl
+                    // Normalize the URL: extract only the scheme and host
+                    var input = url.trim()
+                    if (!input.startsWith("http")) input = "https://$input"
                     
-                    sharedPref.edit().putString("SERVER_URL", finalUrl).apply()
-                    serverUrl = finalUrl
+                    // We want to use the domain root as the base for Retrofit
+                    // because our paths in PosApiService already include "api/api/"
+                    val uri = java.net.URI(input)
+                    val base = "${uri.scheme}://${uri.host}${if (uri.port != -1) ":${uri.port}" else ""}/"
+                    
+                    sharedPref.edit().putString("SERVER_URL", base).apply()
+                    serverUrl = base
                 })
             } else {
                 val retrofit = Retrofit.Builder()
@@ -89,13 +94,13 @@ fun ConfigScreen(onUrlSet: (String) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Enter Server IP Address",
+                text = "Enter Server Address",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
             Text(
-                text = "Example: 192.168.1.5:8000",
+                text = "Example: Siripong.pythonanywhere.com",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
