@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import android.widget.Toast
 import com.example.restaurantpos.data.model.Order
 import com.example.restaurantpos.data.model.OrderItem
 import com.example.restaurantpos.ui.kitchen.KitchenUiState
@@ -42,11 +43,16 @@ fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
             val currentCount = orders.filter { it.status == "pending" }.size
             
             if (currentCount > previousOrderCount) {
-                // New order arrived! Play sound
+                // New order arrived! Play sound and show toast
                 try {
-                    val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                    val r = RingtoneManager.getRingtone(context, notification)
-                    r.play()
+                    val notificationUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                        ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                        ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                    
+                    val ringtone = RingtoneManager.getRingtone(context, notificationUri)
+                    ringtone?.play()
+                    
+                    Toast.makeText(context, "มีออเดอร์ใหม่เข้า! ($currentCount รายการ)", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
