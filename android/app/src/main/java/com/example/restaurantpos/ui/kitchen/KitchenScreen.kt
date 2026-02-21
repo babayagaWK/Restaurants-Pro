@@ -184,7 +184,7 @@ fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
                     indicator = { tabPositions ->
                         if (selectedTabIndex < tabPositions.size) {
                             TabRowDefaults.Indicator(
-                                modifier = androidx.compose.material3.TabRowDefaults.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                                modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
                                 color = Color(0xFFFFB300)
                             )
                         }
