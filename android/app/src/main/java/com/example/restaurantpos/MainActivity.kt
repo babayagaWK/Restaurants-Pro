@@ -2,6 +2,7 @@ package com.example.restaurantpos
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -31,6 +32,7 @@ import com.example.restaurantpos.data.repository.OrderRepository
 import com.example.restaurantpos.ui.kitchen.KitchenScreen
 import com.example.restaurantpos.ui.kitchen.KitchenViewModel
 import com.example.restaurantpos.ui.theme.*
+import com.example.restaurantpos.service.OrderNotificationService
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -69,6 +71,16 @@ class MainActivity : ComponentActivity() {
 
                         sharedPref.edit().putString("SERVER_URL", base).apply()
                         serverUrl = base
+
+                        // Start background notification service
+                        val serviceIntent = Intent(this@MainActivity, OrderNotificationService::class.java).apply {
+                            putExtra(OrderNotificationService.EXTRA_SERVER_URL, base)
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(serviceIntent)
+                        } else {
+                            startService(serviceIntent)
+                        }
                     })
                 } else {
                     val logging = HttpLoggingInterceptor().apply {
@@ -98,10 +110,24 @@ class MainActivity : ComponentActivity() {
                     KitchenScreen(
                         viewModel = viewModel,
                         onResetUrl = {
+                            // Stop notification service
+                            stopService(Intent(this@MainActivity, OrderNotificationService::class.java))
                             sharedPref.edit().remove("SERVER_URL").apply()
                             serverUrl = ""
                         }
                     )
+
+                    // Ensure service is running when KDS screen is active
+                    LaunchedEffect(serverUrl) {
+                        val serviceIntent = Intent(this@MainActivity, OrderNotificationService::class.java).apply {
+                            putExtra(OrderNotificationService.EXTRA_SERVER_URL, serverUrl)
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(serviceIntent)
+                        } else {
+                            startService(serviceIntent)
+                        }
+                    }
                 }
             }
         }

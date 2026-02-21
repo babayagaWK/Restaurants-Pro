@@ -190,7 +190,45 @@
     <!-- Toast Notification -->
     <div id="toast-container" class="toast-container"></div>
 
-    <script src="{% static 'core/js/app.js' %}?v=4.0"></script>
+    <!-- Order Tracking Bar (shows after placing order) -->
+    <div class="order-tracker" id="order-tracker">
+        <div class="tracker-content">
+            <div class="tracker-header">
+                <span class="tracker-title"><i class="fa-solid fa-receipt"></i> ติดตามออเดอร์</span>
+                <button class="tracker-close" onclick="closeOrderTracker()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="tracker-steps">
+                <div class="tracker-step active" id="step-pending">
+                    <div class="step-icon"><i class="fa-solid fa-clock"></i></div>
+                    <span>รอรับออเดอร์</span>
+                </div>
+                <div class="tracker-line" id="line-1"></div>
+                <div class="tracker-step" id="step-cooking">
+                    <div class="step-icon"><i class="fa-solid fa-fire"></i></div>
+                    <span>กำลังทำอาหาร</span>
+                </div>
+                <div class="tracker-line" id="line-2"></div>
+                <div class="tracker-step" id="step-ready">
+                    <div class="step-icon"><i class="fa-solid fa-bell-concierge"></i></div>
+                    <span>พร้อมเสิร์ฟ!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ready Notification Modal (full-screen alert when food is ready) -->
+    <div class="ready-modal-overlay" id="ready-modal">
+        <div class="ready-modal-content">
+            <div class="ready-emoji">🎉</div>
+            <h2>อาหารของคุณพร้อมแล้ว!</h2>
+            <p>กรุณามารับอาหารที่เคาน์เตอร์</p>
+            <button class="btn-primary w-100" onclick="dismissReadyModal()" style="justify-content: center; margin-top: 1.5rem; padding: 1rem; font-size: 1.1rem;">
+                รับทราบ <i class="fa-solid fa-check"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="{% static 'core/js/app.js' %}?v=5.0"></script>
 </body>
 
 </html>

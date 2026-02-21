@@ -626,9 +626,12 @@ fun OrderTicket(
                     }
 
                     // Main action button
+                    // "เริ่มทำ" (pending) → always enabled
+                    // "ทำเสร็จ" (cooking) → requires all items checked
+                    val actionEnabled = if (order.status == "pending") true else allChecked
                     Button(
                         onClick = onAction,
-                        enabled = allChecked,
+                        enabled = actionEnabled,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = actionColor,
                             disabledContainerColor = DarkSurfaceHover
@@ -640,7 +643,7 @@ fun OrderTicket(
                             text = actionText,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (allChecked) Color.White else TextMuted
+                            color = if (actionEnabled) Color.White else TextMuted
                         )
                     }
                 }

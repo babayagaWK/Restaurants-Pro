@@ -37,10 +37,23 @@ let currentTableNumber = null;
 let currentModalItem = null;
 let currentModalQty = 1;
 let currentSelectedOptions = {}; // { groupName: optionObject }
+let trackingOrderId = null;
+let trackingInterval = null;
+let lastTrackedStatus = null;
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
     initTableNumber();
+    // Fix "ทั้งหมด" category pill
+    const allPill = document.querySelector('.category-pill[data-id="all"]');
+    if (allPill) {
+        allPill.onclick = () => filterMenu('all', allPill);
+    }
+    // Restore tracking if page refreshed mid-tracking
+    const savedOrderId = sessionStorage.getItem('trackingOrderId');
+    if (savedOrderId) {
+        startOrderTracking(parseInt(savedOrderId));
+    }
 });
 
 function initTableNumber() {
@@ -536,10 +549,15 @@ async function placeOrder() {
         });
 
         if (response.ok) {
+            const orderData2 = await response.json();
             cart = [];
             updateCartUI();
             toggleCart();
             showToast('🎉 ส่งออเดอร์เรียบร้อยแล้ว รอรับความอร่อยได้เลย!', 4000);
+            // Start tracking the order
+            if (orderData2 && orderData2.id) {
+                startOrderTracking(orderData2.id);
+            }
         } else {
             alert('ส่งออเดอร์ไม่สำเร็จ กรุณาลองใหม่');
         }
@@ -583,4 +601,125 @@ function getCookie(name) {
         }
     }
     return cookieValue;
+}
+
+// === Order Tracking System ===
+
+function startOrderTracking(orderId) {
+    trackingOrderId = orderId;
+    lastTrackedStatus = 'pending';
+    sessionStorage.setItem('trackingOrderId', orderId);
+
+    // Show tracker bar
+    const tracker = document.getElementById('order-tracker');
+    tracker.classList.add('visible');
+    updateTrackerUI('pending');
+
+    // Request browser notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+
+    // Start polling
+    if (trackingInterval) clearInterval(trackingInterval);
+    trackingInterval = setInterval(() => pollOrderStatus(orderId), 10000);
+}
+
+async function pollOrderStatus(orderId) {
+    try {
+        const response = await fetch(`/api/api/orders/${orderId}/`);
+        if (!response.ok) return;
+        const order = await response.json();
+        const status = order.status;
+
+        if (status !== lastTrackedStatus) {
+            lastTrackedStatus = status;
+            updateTrackerUI(status);
+
+            if (status === 'ready') {
+                showReadyNotification();
+                stopOrderTracking();
+            } else if (status === 'completed' || status === 'cancelled') {
+                stopOrderTracking();
+                setTimeout(() => closeOrderTracker(), 5000);
+            }
+        }
+    } catch (error) {
+        console.error('Tracking poll error:', error);
+    }
+}
+
+function updateTrackerUI(status) {
+    const steps = ['pending', 'cooking', 'ready'];
+    const currentIndex = steps.indexOf(status);
+
+    // Update step states
+    document.getElementById('step-pending').className = 'tracker-step' + (currentIndex >= 0 ? ' active' : '');
+    document.getElementById('step-cooking').className = 'tracker-step' + (currentIndex >= 1 ? ' active' : '');
+    document.getElementById('step-ready').className = 'tracker-step' + (currentIndex >= 2 ? ' active' : '');
+
+    // Update lines
+    document.getElementById('line-1').className = 'tracker-line' + (currentIndex >= 1 ? ' active' : '');
+    document.getElementById('line-2').className = 'tracker-line' + (currentIndex >= 2 ? ' active' : '');
+}
+
+function showReadyNotification() {
+    // Show modal
+    const modal = document.getElementById('ready-modal');
+    modal.classList.add('active');
+
+    // Play notification sound
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const playTone = (freq, startTime, duration) => {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.value = freq;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.3, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        };
+        const now = audioContext.currentTime;
+        playTone(523, now, 0.2);      // C5
+        playTone(659, now + 0.2, 0.2); // E5
+        playTone(784, now + 0.4, 0.4); // G5
+    } catch (e) {
+        console.log('Audio not available');
+    }
+
+    // Browser notification
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('🎉 อาหารพร้อมแล้ว!', {
+            body: 'กรุณามารับอาหารที่เคาน์เตอร์',
+            icon: '🍽️',
+            requireInteraction: true
+        });
+    }
+
+    showToast('🎉 อาหารของคุณพร้อมเสิร์ฟแล้ว!', 8000);
+}
+
+function dismissReadyModal() {
+    const modal = document.getElementById('ready-modal');
+    modal.classList.remove('active');
+    closeOrderTracker();
+}
+
+function closeOrderTracker() {
+    const tracker = document.getElementById('order-tracker');
+    tracker.classList.remove('visible');
+    stopOrderTracking();
+}
+
+function stopOrderTracking() {
+    if (trackingInterval) {
+        clearInterval(trackingInterval);
+        trackingInterval = null;
+    }
+    trackingOrderId = null;
+    sessionStorage.removeItem('trackingOrderId');
 }
