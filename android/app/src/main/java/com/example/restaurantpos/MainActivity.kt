@@ -1,9 +1,12 @@
 package com.example.restaurantpos
 
+import android.Manifest
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,14 +22,28 @@ import com.example.restaurantpos.data.api.PosApiService
 import com.example.restaurantpos.data.repository.OrderRepository
 import com.example.restaurantpos.ui.kitchen.KitchenScreen
 import com.example.restaurantpos.ui.kitchen.KitchenViewModel
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 class MainActivity : ComponentActivity() {
+    // Permission Request Launcher
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        // Permission handled
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Request Notification Permission for Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
         val sharedPref = getSharedPreferences("KDS_PREFS", Context.MODE_PRIVATE)
         val initialUrl = sharedPref.getString("SERVER_URL", "") ?: ""
 
@@ -52,8 +69,17 @@ class MainActivity : ComponentActivity() {
                     serverUrl = base
                 })
             } else {
+                // Setup Logging Interceptor
+                val logging = HttpLoggingInterceptor().apply {
+                    level = HttpLoggingInterceptor.Level.BODY
+                }
+                val client = OkHttpClient.Builder()
+                    .addInterceptor(logging)
+                    .build()
+
                 val retrofit = Retrofit.Builder()
                     .baseUrl(serverUrl)
+                    .client(client)
                     .addConverterFactory(GsonConverterFactory.create())
                     .build()
                     
@@ -63,6 +89,7 @@ class MainActivity : ComponentActivity() {
                 val viewModel: KitchenViewModel = viewModel(
                     factory = object : ViewModelProvider.Factory {
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
                             return KitchenViewModel(repository) as T
                         }
                     }

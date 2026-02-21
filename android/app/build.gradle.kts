@@ -66,4 +66,7 @@ dependencies {
     
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
+    
+    // Logging
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 }
