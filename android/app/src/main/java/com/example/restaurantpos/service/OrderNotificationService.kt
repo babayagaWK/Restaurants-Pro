@@ -71,7 +71,8 @@ class OrderNotificationService : Service() {
         serviceScope.launch {
             while (isActive) {
                 try {
-                    val orders = apiService?.getOrders("pending") ?: emptyList()
+                    val response = apiService?.getOrders("pending")
+                    val orders: List<Order> = response?.body() ?: emptyList()
                     val currentIds = orders.map { it.id }.toSet()
 
                     if (!isFirstPoll) {
