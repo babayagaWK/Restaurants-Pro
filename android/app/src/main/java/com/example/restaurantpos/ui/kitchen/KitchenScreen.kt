@@ -20,6 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import com.example.restaurantpos.data.model.Order
 import com.example.restaurantpos.data.model.OrderItem
 import com.example.restaurantpos.ui.kitchen.KitchenUiState
@@ -104,34 +107,39 @@ fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
 
 @Composable
 fun KitchenBoard(orders: List<Order>, onUpdateStatus: (Int, String) -> Unit) {
-    val pendingOrders = orders.filter { it.status == "pending" }
-    val cookingOrders = orders.filter { it.status == "cooking" }
+    // Combine and sort orders by arrival time (oldest first)
+    val allOrders = orders.filter { it.status == "pending" || it.status == "cooking" }
+        .sortedBy { it.createdAt }
 
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Pending Column
-        OrderColumn(
-            title = "NEW ORDERS (${pendingOrders.size})",
-            orders = pendingOrders,
-            modifier = Modifier.weight(1f),
-            actionText = "Start Cooking",
-            actionColor = Color(0xFF2196F3),
-            onAction = { order -> onUpdateStatus(order.id, "cooking") }
-        )
-
-        // Cooking Column
-        OrderColumn(
-            title = "IN PROGRESS (${cookingOrders.size})",
-            orders = cookingOrders,
-            modifier = Modifier.weight(1f),
-            actionText = "Ready to Serve",
-            actionColor = Color(0xFF4CAF50),
-            onAction = { order -> onUpdateStatus(order.id, "ready") }
-        )
+    if (allOrders.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = "ไม่มีออเดอร์ค้างอยู่",
+                color = Color(0xFFF1C40F),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 350.dp),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            items(allOrders) { order ->
+                OrderTicket(
+                    order = order,
+                    actionText = if (order.status == "pending") "เริ่มทำอาหาร" else "ทำเสร็จแล้ว",
+                    actionColor = if (order.status == "pending") Color(0xFF3498DB) else Color(0xFFE74C3C),
+                    onAction = { 
+                        val nextStatus = if (order.status == "pending") "cooking" else "ready"
+                        onUpdateStatus(order.id, nextStatus) 
+                    }
+                )
+            }
+        }
     }
 }
 
