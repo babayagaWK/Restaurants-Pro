@@ -25,7 +25,7 @@ class KitchenViewModel(private val repository: OrderRepository) : ViewModel() {
 
     private fun startPollingOrders() {
         viewModelScope.launch {
-            repository.pollOrders(status = "pending,cooking", intervalMillis = 5000)
+            repository.pollOrders(status = "pending,cooking,ready,completed", intervalMillis = 5000)
                 .catch { e ->
                     _uiState.value = KitchenUiState.Error(e.message ?: "Unknown error occurred")
                 }

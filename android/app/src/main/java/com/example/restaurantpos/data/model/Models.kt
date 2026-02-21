@@ -15,7 +15,7 @@ data class MenuItem(
     val description: String,
     val price: Double,
     @SerializedName("is_available") val isAvailable: Boolean,
-    @SerializedName("image_url") val imageUrl: String?
+    val image: String?
 )
 
 data class OrderItemRequest(
@@ -34,6 +34,7 @@ data class OrderItem(
     @SerializedName("menu_item") val menuItemId: Int,
     @SerializedName("menu_item_name") val menuItemName: String,
     val quantity: Int,
+    val price: Double = 0.0,
     val notes: String
 )
 
