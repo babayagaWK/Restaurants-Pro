@@ -19,6 +19,9 @@ class KitchenViewModel(private val repository: OrderRepository) : ViewModel() {
         startPollingOrders()
     }
 
+    private var knownOrderIds = setOf<Int>()
+    val newOrderAlert = MutableStateFlow<Order?>(null)
+
     private fun startPollingOrders() {
         viewModelScope.launch {
             // Poll both pending and cooking orders every 5 seconds
@@ -28,21 +31,42 @@ class KitchenViewModel(private val repository: OrderRepository) : ViewModel() {
                 }
                 .collect { orders ->
                     _uiState.value = KitchenUiState.Success(orders)
+                    
+                    val currentPendingIds = orders.filter { it.status == "pending" }.map { it.id }.toSet()
+                    
+                    // If it's not the first load, check for newly added pending orders
+                    if (knownOrderIds.isNotEmpty()) {
+                        val newIds = currentPendingIds - knownOrderIds
+                        if (newIds.isNotEmpty() && newOrderAlert.value == null) {
+                            val newOrder = orders.first { it.id == newIds.first() }
+                            newOrderAlert.value = newOrder
+                        }
+                    }
+                    
+                    knownOrderIds = knownOrderIds + currentPendingIds
                 }
+        }
+    }
+
+    fun dismissNewOrderAlert() {
+        newOrderAlert.value = null
+    }
+
+    fun rejectOrder(orderId: Int) {
+        viewModelScope.launch {
+            repository.updateOrderStatus(orderId, "cancelled")
+            dismissNewOrderAlert()
         }
     }
 
     // Move order from 'pending' to 'cooking', or 'cooking' to 'ready'
     fun updateOrderStatus(orderId: Int, newStatus: String) {
         viewModelScope.launch {
-            // Optionally, set state to loading/updating here if needed
             val result = repository.updateOrderStatus(orderId, newStatus)
             result.onSuccess {
-                // The polling flow will automatically fetch the updated list on next tick.
-                // But we could also immediately refresh if we want:
-                // refreshOrders()
+                // Polling handles refresh
             }.onFailure { e ->
-                // Handle error (e.g., show a Toast or snackbar via SharedFlow)
+                // Handle error
             }
         }
     }

@@ -34,31 +34,83 @@ fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Audio Notification Effect
-    var previousOrderCount by remember { mutableStateOf(0) }
+    val newOrderAlert by viewModel.newOrderAlert.collectAsState()
 
-    LaunchedEffect(uiState) {
-        if (uiState is KitchenUiState.Success) {
-            val orders = (uiState as KitchenUiState.Success).orders
-            val currentCount = orders.filter { it.status == "pending" }.size
-            
-            if (currentCount > previousOrderCount) {
-                // New order arrived! Play sound and show toast
-                try {
-                    val notificationUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                        ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                        ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-                    
-                    val ringtone = RingtoneManager.getRingtone(context, notificationUri)
-                    ringtone?.play()
-                    
-                    Toast.makeText(context, "มีออเดอร์ใหม่เข้า! ($currentCount รายการ)", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    e.printStackTrace()
+    // Looping alarm effect for new orders
+    LaunchedEffect(newOrderAlert) {
+        if (newOrderAlert != null) {
+            val notificationUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            var ringtone: android.media.Ringtone? = null
+            try {
+                ringtone = RingtoneManager.getRingtone(context, notificationUri)
+                while (true) {
+                    if (ringtone?.isPlaying == false) {
+                        ringtone.play()
+                    }
+                    kotlinx.coroutines.delay(2500)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                ringtone?.stop()
+            }
+        }
+    }
+
+    if (newOrderAlert != null) {
+        val order = newOrderAlert!!
+        val tableInfo = when {
+            order.tableNumber == 0 -> "Takeaway"
+            order.tableNumber < 0 -> "Delivery"
+            else -> "Table ${order.tableNumber}"
+        }
+        AlertDialog(
+            onDismissRequest = { /* Explicit dismiss required */ },
+            title = {
+                Text(
+                    text = "🔔 ออเดอร์ใหม่เข้า!",
+                    color = Color(0xFFE74C3C),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = tableInfo,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    order.items.forEach { item ->
+                        Text("• ${item.quantity}x ${item.menuItemName}", fontSize = 18.sp, color = Color.DarkGray)
+                        if (item.notes.isNotBlank()) {
+                            Text("  (${item.notes})", color = Color(0xFFE67E22), fontSize = 14.sp)
+                        }
+                    }
+                }
+            },
+            containerColor = Color.White,
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.dismissNewOrderAlert() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF27AE60))
+                ) {
+                    Text("รับทราบ (ปิดเสียง)", color = Color.White)
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { viewModel.rejectOrder(order.id) },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF95A5A6))
+                ) {
+                    Text("ปฏิเสธออเดอร์", color = Color.White)
                 }
             }
-            previousOrderCount = currentCount
-        }
+        )
     }
 
     Scaffold(
@@ -270,25 +322,37 @@ fun OrderTicket(
                 }
             }
 
-            // Action Button (Full Width Bottom)
-            Button(
-                onClick = onAction,
-                enabled = allChecked,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (order.status == "pending") Color(0xFF3498DB) else Color(0xFFE74C3C),
-                    disabledContainerColor = Color(0xFFBDC3C7)
-                ),
-                shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Text(
-                    text = actionText,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (allChecked) Color.White else Color.DarkGray
-                )
+            // Action Buttons
+            Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                val context = LocalContext.current
+                Button(
+                    onClick = { 
+                        Toast.makeText(context, "ฟังก์ชันดูบิลสำหรับออเดอร์ ID: ${order.id} ยังไม่ได้สร้าง", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF95A5A6)),
+                    shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 0.dp),
+                    modifier = Modifier.weight(1f).fillMaxHeight()
+                ) {
+                    Text("ดูบิล", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+                
+                Button(
+                    onClick = onAction,
+                    enabled = allChecked,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (order.status == "pending") Color(0xFF3498DB) else Color(0xFFE74C3C),
+                        disabledContainerColor = Color(0xFFBDC3C7)
+                    ),
+                    shape = RoundedCornerShape(bottomStart = 0.dp, bottomEnd = 8.dp),
+                    modifier = Modifier.weight(1f).fillMaxHeight()
+                ) {
+                    Text(
+                        text = actionText,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (allChecked) Color.White else Color.DarkGray
+                    )
+                }
             }
         }
     }
