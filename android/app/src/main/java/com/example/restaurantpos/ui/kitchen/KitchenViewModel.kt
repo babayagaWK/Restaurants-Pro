@@ -20,11 +20,11 @@ class KitchenViewModel(private val repository: OrderRepository) : ViewModel() {
     }
 
     private var knownOrderIds = setOf<Int>()
+    private var isFirstLoad = true
     val newOrderAlert = MutableStateFlow<Order?>(null)
 
     private fun startPollingOrders() {
         viewModelScope.launch {
-            // Poll both pending and cooking orders every 5 seconds
             repository.pollOrders(status = "pending,cooking", intervalMillis = 5000)
                 .catch { e ->
                     _uiState.value = KitchenUiState.Error(e.message ?: "Unknown error occurred")
@@ -34,13 +34,14 @@ class KitchenViewModel(private val repository: OrderRepository) : ViewModel() {
                     
                     val currentPendingIds = orders.filter { it.status == "pending" }.map { it.id }.toSet()
                     
-                    // If it's not the first load, check for newly added pending orders
-                    if (knownOrderIds.isNotEmpty()) {
+                    if (!isFirstLoad) {
                         val newIds = currentPendingIds - knownOrderIds
                         if (newIds.isNotEmpty() && newOrderAlert.value == null) {
                             val newOrder = orders.first { it.id == newIds.first() }
                             newOrderAlert.value = newOrder
                         }
+                    } else {
+                        isFirstLoad = false
                     }
                     
                     knownOrderIds = knownOrderIds + currentPendingIds

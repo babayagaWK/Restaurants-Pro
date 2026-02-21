@@ -59,6 +59,48 @@ fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
         }
     }
 
+    var showBillDialog by remember { mutableStateOf<Order?>(null) }
+
+    if (showBillDialog != null) {
+        val order = showBillDialog!!
+        val tableInfo = when {
+            order.tableNumber == 0 -> "Takeaway"
+            order.tableNumber < 0 -> "Delivery"
+            else -> "Table ${order.tableNumber}"
+        }
+        AlertDialog(
+            onDismissRequest = { showBillDialog = null },
+            title = {
+                Text("ใบเสร็จ / Receipt", fontWeight = FontWeight.Bold, fontSize = 22.sp)
+            },
+            text = {
+                Column {
+                    Text("ออเดอร์ ID: ${order.id}", fontWeight = FontWeight.Bold)
+                    Text("ประเภท: $tableInfo")
+                    Text("เวลา: ${order.createdAt}")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Divider()
+                    Spacer(modifier = Modifier.height(8.dp))
+                    order.items.forEach { item ->
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("${item.quantity}x ${item.menuItemName}", modifier = Modifier.weight(1f))
+                        }
+                        if (item.notes.isNotBlank()) {
+                            Text("  * ${item.notes}", color = Color(0xFFE67E22), fontSize = 12.sp)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Divider()
+                }
+            },
+            confirmButton = {
+                Button(onClick = { showBillDialog = null }) {
+                    Text("ปิด (Close)")
+                }
+            }
+        )
+    }
+
     if (newOrderAlert != null) {
         val order = newOrderAlert!!
         val tableInfo = when {
@@ -113,24 +155,48 @@ fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
         )
     }
 
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val tabs = listOf("กำลังทำ (Active)", "เสร็จแล้ว (Completed)")
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Kitchen Display System", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
+            Column {
+                TopAppBar(
+                    title = { Text("Kitchen Display System", fontWeight = FontWeight.Bold) },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color(0xFF1E1E1E),
+                        titleContentColor = Color.White
+                    ),
+                    actions = {
+                        IconButton(onClick = onResetUrl) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Change Server URL",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                )
+                TabRow(
+                    selectedTabIndex = selectedTabIndex,
                     containerColor = Color(0xFF1E1E1E),
-                    titleContentColor = Color.White
-                ),
-                actions = {
-                    IconButton(onClick = onResetUrl) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Change Server URL",
-                            tint = Color.White
+                    contentColor = Color.White,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                            color = Color(0xFFFFB300)
+                        )
+                    }
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTabIndex == index,
+                            onClick = { selectedTabIndex = index },
+                            text = { Text(title, fontWeight = FontWeight.Bold) }
                         )
                     }
                 }
-            )
+            }
         }
     ) { paddingValues ->
         Box(
@@ -177,6 +243,7 @@ fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
                 is KitchenUiState.Success -> {
                     KitchenBoard(
                         orders = state.orders,
+                        selectedTabIndex = selectedTabIndex,
                         onUpdateStatus = { orderId, newStatus ->
                             viewModel.updateOrderStatus(orderId, newStatus)
                         }
@@ -188,10 +255,10 @@ fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
 }
 
 @Composable
-fun KitchenBoard(orders: List<Order>, onUpdateStatus: (Int, String) -> Unit) {
+fun KitchenBoard(orders: List<Order>, selectedTabIndex: Int, onUpdateStatus: (Int, String) -> Unit) {
     // Combine and sort orders by arrival time (oldest first)
-    val allOrders = orders.filter { it.status == "pending" || it.status == "cooking" }
-        .sortedBy { it.createdAt }
+    val targetStatuses = if (selectedTabIndex == 0) listOf("pending", "cooking") else listOf("ready", "completed")
+    val allOrders = orders.filter { it.status in targetStatuses }.sortedBy { it.createdAt }
 
     if (allOrders.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -323,35 +390,54 @@ fun OrderTicket(
             }
 
             // Action Buttons
-            Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                val context = LocalContext.current
+            if (isCompletedTab) {
                 Button(
-                    onClick = { 
-                        Toast.makeText(context, "ฟังก์ชันดูบิลสำหรับออเดอร์ ID: ${order.id} ยังไม่ได้สร้าง", Toast.LENGTH_SHORT).show()
-                    },
+                    onClick = onViewBill,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF95A5A6)),
-                    shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 0.dp),
-                    modifier = Modifier.weight(1f).fillMaxHeight()
+                    shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
                 ) {
-                    Text("ดูบิล", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("ดูบิล (View Bill)", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
-                
-                Button(
-                    onClick = onAction,
-                    enabled = allChecked,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (order.status == "pending") Color(0xFF3498DB) else Color(0xFFE74C3C),
-                        disabledContainerColor = Color(0xFFBDC3C7)
-                    ),
-                    shape = RoundedCornerShape(bottomStart = 0.dp, bottomEnd = 8.dp),
-                    modifier = Modifier.weight(1f).fillMaxHeight()
-                ) {
-                    Text(
-                        text = actionText,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (allChecked) Color.White else Color.DarkGray
-                    )
+            } else {
+                Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                    Button(
+                        onClick = onViewBill,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF95A5A6)),
+                        shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 0.dp),
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    ) {
+                        Text("ดูบิล", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    
+                    if (order.status == "pending") {
+                        Button(
+                            onClick = onReject,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE74C3C)),
+                            shape = RoundedCornerShape(0.dp),
+                            modifier = Modifier.weight(1f).fillMaxHeight()
+                        ) {
+                            Text("ปฏิเสธ", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+
+                    Button(
+                        onClick = onAction,
+                        enabled = allChecked,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (order.status == "pending") Color(0xFF3498DB) else Color(0xFF27AE60),
+                            disabledContainerColor = Color(0xFFBDC3C7)
+                        ),
+                        shape = RoundedCornerShape(bottomStart = 0.dp, bottomEnd = 8.dp),
+                        modifier = Modifier.weight(1.5f).fillMaxHeight()
+                    ) {
+                        Text(
+                            text = actionText,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (allChecked) Color.White else Color.DarkGray
+                        )
+                    }
                 }
             }
         }
