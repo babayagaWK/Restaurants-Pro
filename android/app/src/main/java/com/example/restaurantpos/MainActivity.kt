@@ -34,14 +34,18 @@ class MainActivity : ComponentActivity() {
             var serverUrl by remember { mutableStateOf(initialUrl) }
 
             if (serverUrl.isEmpty()) {
-                ConfigScreen(onUrlSet = { url ->
-                    // Normalize the URL: extract only the scheme and host
-                    var input = url.trim()
-                    if (!input.startsWith("http")) input = "https://$input"
+                ConfigScreen(onUrlSet = { input ->
+                    var domain = input.trim()
+                    // If it's just a username (no dots), append the pythonanywhere domain
+                    if (!domain.contains(".")) {
+                        domain = "$domain.pythonanywhere.com"
+                    }
                     
-                    // We want to use the domain root as the base for Retrofit
-                    // because our paths in PosApiService already include "api/api/"
-                    val uri = java.net.URI(input)
+                    // Add https if missing
+                    val fullUrl = if (!domain.startsWith("http")) "https://$domain" else domain
+                    
+                    // Normalize to host root for Retrofit
+                    val uri = java.net.URI(fullUrl)
                     val base = "${uri.scheme}://${uri.host}${if (uri.port != -1) ":${uri.port}" else ""}/"
                     
                     sharedPref.edit().putString("SERVER_URL", base).apply()
@@ -94,21 +98,29 @@ fun ConfigScreen(onUrlSet: (String) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Enter Server Address",
-                fontSize = 24.sp,
+                text = "KDS Connection",
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
             Text(
-                text = "Example: Siripong.pythonanywhere.com",
+                text = "Enter your PythonAnywhere Username",
+                fontSize = 18.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = "Example: Siripong",
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
             
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                label = { Text("Server Address") },
+                label = { Text("Username") },
+                placeholder = { Text("e.g. Siripong") },
                 modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
                 singleLine = true
             )
