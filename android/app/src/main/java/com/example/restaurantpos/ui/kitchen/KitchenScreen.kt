@@ -246,6 +246,12 @@ fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
                         selectedTabIndex = selectedTabIndex,
                         onUpdateStatus = { orderId, newStatus ->
                             viewModel.updateOrderStatus(orderId, newStatus)
+                        },
+                        onReject = { orderId ->
+                            viewModel.rejectOrder(orderId)
+                        },
+                        onViewBill = { order ->
+                            showBillDialog = order
                         }
                     )
                 }
@@ -255,7 +261,13 @@ fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
 }
 
 @Composable
-fun KitchenBoard(orders: List<Order>, selectedTabIndex: Int, onUpdateStatus: (Int, String) -> Unit) {
+fun KitchenBoard(
+    orders: List<Order>, 
+    selectedTabIndex: Int, 
+    onUpdateStatus: (Int, String) -> Unit,
+    onReject: (Int) -> Unit,
+    onViewBill: (Order) -> Unit
+) {
     // Combine and sort orders by arrival time (oldest first)
     val targetStatuses = if (selectedTabIndex == 0) listOf("pending", "cooking") else listOf("ready", "completed")
     val allOrders = orders.filter { it.status in targetStatuses }.sortedBy { it.createdAt }
@@ -285,7 +297,10 @@ fun KitchenBoard(orders: List<Order>, selectedTabIndex: Int, onUpdateStatus: (In
                     onAction = { 
                         val nextStatus = if (order.status == "pending") "cooking" else "ready"
                         onUpdateStatus(order.id, nextStatus) 
-                    }
+                    },
+                    onReject = { onReject(order.id) },
+                    onViewBill = { onViewBill(order) },
+                    isCompletedTab = selectedTabIndex == 1
                 )
             }
         }
@@ -299,7 +314,10 @@ fun OrderTicket(
     order: Order,
     actionText: String,
     actionColor: Color,
-    onAction: () -> Unit
+    onAction: () -> Unit,
+    onReject: () -> Unit,
+    onViewBill: () -> Unit,
+    isCompletedTab: Boolean
 ) {
     // Checkbox State Map: Maps OrderItem.id to Boolean
     val itemStates = remember(order.id) { 
