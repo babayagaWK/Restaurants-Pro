@@ -12,19 +12,19 @@ import retrofit2.http.Query
 
 interface PosApiService {
 
-    @GET("api/categories/")
+    @GET("api/api/categories/")
     suspend fun getCategories(): Response<List<Category>>
 
-    @GET("api/menu-items/")
+    @GET("api/api/menu-items/")
     suspend fun getMenuItems(): Response<List<MenuItem>>
 
-    @POST("api/orders/")
+    @POST("api/api/orders/")
     suspend fun createOrder(@Body order: OrderRequest): Response<Order>
 
-    @GET("api/orders/")
+    @GET("api/api/orders/")
     suspend fun getOrders(@Query("status") status: String? = null): Response<List<Order>>
 
-    @retrofit2.http.PATCH("api/orders/{id}/")
+    @retrofit2.http.PATCH("api/api/orders/{id}/")
     suspend fun updateOrderStatus(
         @retrofit2.http.Path("id") orderId: Int,
         @Body statusUpdate: Map<String, String>

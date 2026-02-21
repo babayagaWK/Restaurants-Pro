@@ -212,8 +212,13 @@ fun OrderTicket(
                         )
                     }
                     
+                    val timeStr = if (order.createdAt.length >= 19) {
+                        order.createdAt.substring(11, 19)
+                    } else {
+                        order.createdAt
+                    }
                     Text(
-                        text = "Time: ${order.createdAt.substring(11, 19)}",
+                        text = "Time: $timeStr",
                         fontSize = 14.sp,
                         color = Color(0xFF7F8C8D),
                         fontWeight = FontWeight.Bold

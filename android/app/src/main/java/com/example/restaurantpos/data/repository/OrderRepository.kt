@@ -21,12 +21,12 @@ class OrderRepository(private val apiService: PosApiService) {
                         emit(orders)
                     }
                 } else {
-                    // Handle error (log it, but keep polling or emit partial error)
-                    println("Polling error: ${response.code()}")
+                    // Throw to be caught by ViewModel
+                    throw Exception("Polling error: ${response.code()} ${response.message()}")
                 }
-            } catch (e: IOException) {
-                // Network error, wait and retry
-                println("Polling network exception: ${e.message}")
+            } catch (e: Exception) {
+                // Re-throw so ViewModel catch block handles it
+                throw e
             }
             delay(intervalMillis)
         }

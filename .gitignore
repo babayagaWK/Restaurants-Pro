@@ -1,0 +1,26 @@
+# Android
+.gradle/
+build/
+*.apk
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+db.sqlite3
+
+# Deployment
+deploy_package.zip
+server_deploy.py
+headless_deploy.py
+
+# OS
+.DS_Store
+Thumbs.db
