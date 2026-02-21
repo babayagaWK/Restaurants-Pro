@@ -92,11 +92,35 @@ fun KitchenScreen(viewModel: KitchenViewModel, onResetUrl: () -> Unit = {}) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFFFFB300))
                 }
                 is KitchenUiState.Error -> {
-                    Text(
-                        text = "Error: ${state.message}",
-                        color = Color.Red,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color.Red,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Connection Error",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = state.message,
+                            color = Color(0xFFBDC3C7),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(onClick = onResetUrl) {
+                            Text("Change Settings")
+                        }
+                    }
                 }
                 is KitchenUiState.Success -> {
                     KitchenBoard(
